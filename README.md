@@ -1,8 +1,12 @@
 # Gitrepo::Status
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/gitrepo/status`. To experiment with that code, run `bin/console` for an interactive prompt.
+## Idea
 
-TODO: Delete this and the text above, and describe your gem
+ - Check current status/commit of a repo
+ - compare with remotes and extra urls
+ - get source url from metadata.json for puppet modules
+ - get puppetforge version for puppet modules
+
 
 ## Installation
 
