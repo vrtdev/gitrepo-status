@@ -1,0 +1,41 @@
+#!/usr/bin/env ruby
+require 'getoptlong'
+require 'gitrepo/status'
+
+def clidoc
+  puts <<-CLIDOC
+
+    #{$PROGRAM_NAME} [OPTION]
+
+    -h, --help:
+    show help
+
+    -d, --debug [level]:
+    Debug level.
+
+  CLIDOC
+end
+
+opts = GetoptLong.new(
+  ['--help', '-h', GetoptLong::NO_ARGUMENT],
+  ['--debug', '-d', GetoptLong::OPTIONAL_ARGUMENT]
+)
+
+debug = 0
+
+opts.each do |opt, arg|
+  case opt
+  when '--help'
+    clidoc
+    exit
+  when '--debug'
+    debug = if arg == ''
+              1
+            else
+              arg.to_i
+            end
+  end
+end
+
+
+# vim:set fileencoding=utf8 fileformat=undefined filetype=ruby tabstop=2 expandtab:

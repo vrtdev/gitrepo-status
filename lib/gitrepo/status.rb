@@ -1,7 +1,7 @@
-require "gitrepo/status/version"
+require 'gitrepo/status/version'
 
-module Gitrepo
-  module Status
+class Gitrepo
+  class Status
     # Your code goes here...
   end
 end
