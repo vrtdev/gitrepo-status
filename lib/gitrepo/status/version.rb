@@ -1,5 +1,5 @@
-module Gitrepo
-  module Status
+class Gitrepo
+  class Status
     VERSION = '0.1.0'.freeze
   end
 end

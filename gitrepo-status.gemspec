@@ -33,5 +33,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rake', '~> 12.0'
   spec.add_development_dependency 'rspec', '~> 3.7'
 
-  spec.add_runtime_dependency 'rugged', '~>0.27'
+  # Building rugged is a pain, install system package 'ruby-rugged' instead.
+  # spec.add_runtime_dependency 'rugged'
+  spec.add_runtime_dependency 'awesome_print'
 end

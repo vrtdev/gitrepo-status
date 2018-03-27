@@ -13,15 +13,31 @@ def clidoc
     -d, --debug [level]:
     Debug level.
 
+    -p, --path [location in repo to check]
+    Path to a location in the repo to check.
+    Default '.' (Current directory)
+
+    -a, --ahead_behind
+    Show how many commits current commit is ahead or behind remote.
+
+    -t, --tests
+    Run some test code...
+
   CLIDOC
 end
 
 opts = GetoptLong.new(
   ['--help', '-h', GetoptLong::NO_ARGUMENT],
-  ['--debug', '-d', GetoptLong::OPTIONAL_ARGUMENT]
+  ['--debug', '-d', GetoptLong::OPTIONAL_ARGUMENT],
+  ['--path', '-p', GetoptLong::REQUIRED_ARGUMENT],
+  ['--ahead_behind', '-a', GetoptLong::NO_ARGUMENT],
+  ['--test', '-t', GetoptLong::NO_ARGUMENT]
 )
 
 debug = 0
+path = '.'
+ahead_behind = false
+test = false
 
 opts.each do |opt, arg|
   case opt
@@ -34,8 +50,30 @@ opts.each do |opt, arg|
             else
               arg.to_i
             end
+  when '--path'
+    path = arg
+  when '--ahead_behind'
+    ahead_behind = true
+  when '--test'
+    test = true
   end
 end
 
+status = Gitrepo::Status.new(path: path)
 
+status.fetch
+
+status.test if test
+
+if ahead_behind
+  a_b = status.ahead_behind
+  unless a_b.nil?
+    a_b.each do |name, data|
+      puts "-- Branch : #{name}"
+      next if (data[0]).zero? && (data[1]).zero?
+      puts "    ahead : #{data[0]} commits"
+      puts "   behind : #{data[1]} commits"
+    end
+  end
+end
 # vim:set fileencoding=utf8 fileformat=undefined filetype=ruby tabstop=2 expandtab:
