@@ -1,7 +1,6 @@
 require 'gitrepo/status/version'
 require 'rugged'
-require 'awesome_print'
-require 'pp'
+require 'json'
 
 # Class Gitrepo
 class Gitrepo
@@ -9,6 +8,7 @@ class Gitrepo
   class Status
     def initialize(opt = {})
       @path = opt.fetch(:path)
+      @report_branches = opt[:report_branches] || %w[master]
       repo
     end
 
@@ -19,17 +19,13 @@ class Gitrepo
       @repo
     end
 
-    # def remotes
-    #   repo.remotes
-    # end
-
-    def fetch
+    def fetch_all
       # libgit2 and https... a dificult story... :-(
       # remotes.each do |remote|
       #   repo.fetch remote.name
       # end
-      cmd1 = 'git branch -r | grep -v "\->" | while read remote; do git branch --track "${remote#origin/}" "$remote" 2> /dev/null; done'
-      cmd2 = 'git fetch --all'
+      cmd1 = 'git branch -r | grep -v "\->" | while read remote; do git branch --track "${remote#origin/}" "$remote" > /dev/null 2>&1; done'
+      cmd2 = 'git fetch --all > /dev/null 2>&1'
       Dir.chdir(@path) do
         `#{cmd1}`
         `#{cmd2}`
@@ -40,20 +36,47 @@ class Gitrepo
       !repo.index.get('metadata.json').nil?
     end
 
-    def ahead_behind
+    def branchnames
       branches_txt = ''
-      branches = {}
       Dir.chdir(@path) do
         branches_txt = `git branch --contains HEAD | grep -v 'detached at'`
       end
-      branches_txt.split("\n").each do |branch|
-        branch.strip!
+      branches = branches_txt.split("\n").map(&:strip)
+      branches.insert(0, branches.delete('master')) if branches.include?('master')
+      select_branches(branches)
+    end
+
+    def select_branches(branches)
+      return branches if @report_branches.empty?
+      b = branches.select { |e| @report_branches.include?(e) }
+      return b unless b.empty?
+      branches
+    end
+
+    def ahead_behind
+      branches = {}
+      branchnames.each do |branch|
+        branch = "origin/#{branch}"
         branches[branch] = repo.ahead_behind(repo.head.target_id, branch)
       end
       branches
     end
 
+    def puppet_module_info
+      blob = repo.blob_at(repo.head.target_id, 'metadata.json')
+      current_metadata = JSON.parse(blob.content)
+      diff = {}
+      branchnames.each do |branch|
+        blob = repo.blob_at(repo.branches[branch].target_id, 'metadata.json')
+        branch_metadata = JSON.parse(blob.content)
+        branch_diff = deep_diff(current_metadata, branch_metadata)
+        diff[branch] = branch_diff unless branch_diff.empty?
+      end
+      diff
+    end
+
     def test
+      require 'awesome_print'
       # puts '--- repo.methods ---'
       # ap repo.methods
       puts '--- repo.path ---'
@@ -110,6 +133,19 @@ class Gitrepo
       #   ap branch.methods
       #   ap branch.name
       # end
+    end
+
+    def deep_diff(a, b)
+      (a.keys | b.keys).each_with_object({}) do |k, diff|
+        if a[k] != b[k]
+          if a[k].is_a?(Hash) && b[k].is_a?(Hash)
+            diff[k] = deep_diff(a[k], b[k])
+          else
+            diff[k] = [a[k], b[k]]
+          end
+        end
+        diff
+      end
     end
   end
 end

@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 require 'getoptlong'
 require 'gitrepo/status'
+require 'awesome_print'
 
 def clidoc
   puts <<-CLIDOC
@@ -20,6 +21,9 @@ def clidoc
     -a, --ahead_behind
     Show how many commits current commit is ahead or behind remote.
 
+    --puppet
+    Report puppet module info from metadata.json
+
     -t, --tests
     Run some test code...
 
@@ -31,12 +35,14 @@ opts = GetoptLong.new(
   ['--debug', '-d', GetoptLong::OPTIONAL_ARGUMENT],
   ['--path', '-p', GetoptLong::REQUIRED_ARGUMENT],
   ['--ahead_behind', '-a', GetoptLong::NO_ARGUMENT],
+  ['--puppet', GetoptLong::NO_ARGUMENT],
   ['--test', '-t', GetoptLong::NO_ARGUMENT]
 )
 
 debug = 0
 path = '.'
 ahead_behind = false
+puppet = false
 test = false
 
 opts.each do |opt, arg|
@@ -54,25 +60,47 @@ opts.each do |opt, arg|
     path = arg
   when '--ahead_behind'
     ahead_behind = true
+  when '--puppet'
+    puppet = true
   when '--test'
     test = true
   end
 end
 
-status = Gitrepo::Status.new(path: path)
+gitrepo = Gitrepo::Status.new(path: path)
 
-status.fetch
+gitrepo.fetch_all
 
-status.test if test
+gitrepo.test if test
 
 if ahead_behind
-  a_b = status.ahead_behind
+  a_b = gitrepo.ahead_behind
   unless a_b.nil?
     a_b.each do |name, data|
       puts "-- Branch : #{name}"
-      next if (data[0]).zero? && (data[1]).zero?
-      puts "    ahead : #{data[0]} commits"
-      puts "   behind : #{data[1]} commits"
+      if (data[0]).zero? && (data[1]).zero?
+        puts '   Branch up to date.'
+      else
+        puts "    ahead : #{data[0]} commits"
+        puts "   behind : #{data[1]} commits"
+      end
+    end
+  end
+end
+
+if puppet && gitrepo.puppet_module?
+  diff = gitrepo.puppet_module_info
+  keys = %w[version dependencies requirements]
+  unless diff.empty?
+    diff.each do |name, data|
+      puts "--- metadata difference with branch : #{name} (keys #{keys})"
+      data.select { |key, _| keys.include?(key) }.each do |k, v|
+        puts "   Key : #{k}"
+        print '     Old  : '
+        ap v[0]
+        print '     New  : '
+        ap v[1]
+      end
     end
   end
 end

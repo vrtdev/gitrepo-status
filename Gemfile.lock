@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    gitrepo-status (0.1.0)
+    gitrepo-status (0.2.0)
       awesome_print
 
 GEM
