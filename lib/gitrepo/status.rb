@@ -56,8 +56,7 @@ class Gitrepo
     def ahead_behind
       branches = {}
       branchnames.each do |branch|
-        branch = "origin/#{branch}"
-        branches[branch] = repo.ahead_behind(repo.head.target_id, branch)
+        branches[branch] = repo.ahead_behind(repo.head.target_id, "origin/#{branch}")
       end
       branches
     end
@@ -138,11 +137,11 @@ class Gitrepo
     def deep_diff(a, b)
       (a.keys | b.keys).each_with_object({}) do |k, diff|
         if a[k] != b[k]
-          if a[k].is_a?(Hash) && b[k].is_a?(Hash)
-            diff[k] = deep_diff(a[k], b[k])
-          else
-            diff[k] = [a[k], b[k]]
-          end
+          diff[k] = if a[k].is_a?(Hash) && b[k].is_a?(Hash)
+                      deep_diff(a[k], b[k])
+                    else
+                      diff[k] = [a[k], b[k]]
+                    end
         end
         diff
       end

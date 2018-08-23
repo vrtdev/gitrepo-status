@@ -2,6 +2,7 @@
 require 'getoptlong'
 require 'gitrepo/status'
 require 'awesome_print'
+require 'yaml'
 
 def clidoc
   puts <<-CLIDOC
@@ -14,9 +15,16 @@ def clidoc
     -d, --debug [level]:
     Debug level.
 
-    -p, --path [location in repo to check]
-    Path to a location in the repo to check.
+    -p, --path [location of repo to check]
+    Path to a location of the repo to check.
     Default '.' (Current directory)
+    If this ends in '/' the script will loop over
+    all subdirectories. These should all be git repos.
+
+    -o, --output [txt|raw|html|yaml|...].
+    Multiple types specified by comma separated string.
+    eg : -o txt,html
+    Default 'txt'
 
     -a, --ahead_behind
     Show how many commits current commit is ahead or behind remote.
@@ -34,6 +42,7 @@ opts = GetoptLong.new(
   ['--help', '-h', GetoptLong::NO_ARGUMENT],
   ['--debug', '-d', GetoptLong::OPTIONAL_ARGUMENT],
   ['--path', '-p', GetoptLong::REQUIRED_ARGUMENT],
+  ['--output', '-o', GetoptLong::REQUIRED_ARGUMENT],
   ['--ahead_behind', '-a', GetoptLong::NO_ARGUMENT],
   ['--puppet', GetoptLong::NO_ARGUMENT],
   ['--test', '-t', GetoptLong::NO_ARGUMENT]
@@ -41,6 +50,7 @@ opts = GetoptLong.new(
 
 debug = 0
 path = '.'
+output = ['txt']
 ahead_behind = false
 puppet = false
 test = false
@@ -58,6 +68,8 @@ opts.each do |opt, arg|
             end
   when '--path'
     path = arg
+  when '--output'
+    output = arg.split(',')
   when '--ahead_behind'
     ahead_behind = true
   when '--puppet'
@@ -67,41 +79,80 @@ opts.each do |opt, arg|
   end
 end
 
-gitrepo = Gitrepo::Status.new(path: path)
+o_r = output.include?('raw')
+OT = output.include?('txt')
+o_h = output.include?('html')
+o_y = output.include?('yaml')
 
-gitrepo.fetch_all
+paths = if path.end_with? '/'
+          Dir.glob("#{path}*/")
+        else
+          [path]
+        end
 
-gitrepo.test if test
+result = {}
 
-if ahead_behind
-  a_b = gitrepo.ahead_behind
-  unless a_b.nil?
-    a_b.each do |name, data|
-      puts "-- Branch : #{name}"
-      if (data[0]).zero? && (data[1]).zero?
-        puts '   Branch up to date.'
-      else
-        puts "    ahead : #{data[0]} commits"
-        puts "   behind : #{data[1]} commits"
-      end
-    end
+def o_t_p(obj, ap_p=false)
+  return unless OT
+  if ap_p
+    ap obj
+  else
+    puts obj
   end
 end
 
-if puppet && gitrepo.puppet_module?
-  diff = gitrepo.puppet_module_info
-  keys = %w[version dependencies requirements]
-  unless diff.empty?
-    diff.each do |name, data|
-      puts "--- metadata difference with branch : #{name} (keys #{keys})"
-      data.select { |key, _| keys.include?(key) }.each do |k, v|
-        puts "   Key : #{k}"
-        print '     Old  : '
-        ap v[0]
-        print '     New  : '
-        ap v[1]
+paths.each do |path|
+  o_t_p "Path : #{path}"
+  r = {}
+
+  gitrepo = Gitrepo::Status.new(path: path)
+
+  gitrepo.fetch_all
+
+  gitrepo.test if test
+
+  r['branches'] = {}
+
+  if ahead_behind
+    a_b = gitrepo.ahead_behind
+    unless a_b.nil?
+      a_b.each do |name, data|
+        r['branches'][name] ||= {}
+        o_t_p "-- Branch : #{name}"
+        if (data[0]).zero? && (data[1]).zero?
+          o_t_p '   Branch up to date.'
+        else
+          o_t_p  "    ahead : #{data[0]} commits"
+          o_t_p  "   behind : #{data[1]} commits"
+        end
+        r['branches'][name]['a_b'] = data
       end
     end
   end
+
+  if puppet && gitrepo.puppet_module?
+    diff = gitrepo.puppet_module_info
+    keys = %w[version dependencies requirements]
+    unless diff.empty?
+      diff.each do |name, data|
+        r['branches'][name] ||= {}
+        o_t_p "--- metadata difference with branch : #{name} (keys #{keys})"
+        data.select { |key, _| keys.include?(key) }.each do |k, v|
+          o_t_p "   Key : #{k}"
+          o_t_p '     Old  : '
+          o_t_p v[0], true
+          o_t_p '     New  : '
+          o_t_p v[1], true
+          r['branches'][name][k] = v
+        end
+      end
+    end
+  end
+  result[path] = r
 end
+
+ap result if o_r
+puts 'html output not implementd yet' if o_h
+puts result.to_yaml if o_y
+
 # vim:set fileencoding=utf8 fileformat=undefined filetype=ruby tabstop=2 expandtab:
