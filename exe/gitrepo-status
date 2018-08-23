@@ -4,6 +4,16 @@ require 'gitrepo/status'
 require 'awesome_print'
 require 'yaml'
 
+class Hash
+  def to_html
+    [
+      '<ul>',
+      map { |k, v| ["<li><strong>#{k}:</strong> ", v.respond_to?(:to_html) ? v.to_html : "<span>#{v}</span></li>"] },
+      '</ul>'
+    ].join
+  end
+end
+
 def clidoc
   puts <<-CLIDOC
 
@@ -79,10 +89,10 @@ opts.each do |opt, arg|
   end
 end
 
-o_r = output.include?('raw')
+OR = output.include?('raw')
 OT = output.include?('txt')
-o_h = output.include?('html')
-o_y = output.include?('yaml')
+OH = output.include?('html')
+OY = output.include?('yaml')
 
 paths = if path.end_with? '/'
           Dir.glob("#{path}*/")
@@ -92,13 +102,49 @@ paths = if path.end_with? '/'
 
 result = {}
 
-def o_t_p(obj, ap_p=false)
+def o_t_p(obj, ap_p = false)
   return unless OT
   if ap_p
     ap obj
   else
     puts obj
   end
+end
+
+def o_t_r(obj)
+  return unless OR
+  ap obj
+end
+
+def o_t_h(obj)
+  return unless OH
+  html_str = %(
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Puppet Module version report</title>
+  <meta name="author" content="gitrepo-status">
+  <meta name="description" content="Puppet Module Git repo status">
+  <link rel="stylesheet" href="stylesheet.css" type="text/css">
+  <style type="text/css">
+
+  </style>
+  </head>
+  <body>
+
+  #{obj.to_html}
+
+  </body>
+</html>
+  )
+  puts html_str
+end
+
+def o_t_y(obj)
+  return unless OY
+  puts obj.to_yaml
 end
 
 paths.each do |path|
@@ -111,13 +157,13 @@ paths.each do |path|
 
   gitrepo.test if test
 
-  r['branches'] = {}
+  r = {}
 
   if ahead_behind
     a_b = gitrepo.ahead_behind
     unless a_b.nil?
       a_b.each do |name, data|
-        r['branches'][name] ||= {}
+        r[name] ||= {}
         o_t_p "-- Branch : #{name}"
         if (data[0]).zero? && (data[1]).zero?
           o_t_p '   Branch up to date.'
@@ -125,7 +171,7 @@ paths.each do |path|
           o_t_p  "    ahead : #{data[0]} commits"
           o_t_p  "   behind : #{data[1]} commits"
         end
-        r['branches'][name]['a_b'] = data
+        r[name]['ahead - behind'] = data
       end
     end
   end
@@ -135,7 +181,7 @@ paths.each do |path|
     keys = %w[version dependencies requirements]
     unless diff.empty?
       diff.each do |name, data|
-        r['branches'][name] ||= {}
+        r[name] ||= {}
         o_t_p "--- metadata difference with branch : #{name} (keys #{keys})"
         data.select { |key, _| keys.include?(key) }.each do |k, v|
           o_t_p "   Key : #{k}"
@@ -143,7 +189,7 @@ paths.each do |path|
           o_t_p v[0], true
           o_t_p '     New  : '
           o_t_p v[1], true
-          r['branches'][name][k] = v
+          r[name][k] = { 'Old' => v[0], 'New' => v[1] }
         end
       end
     end
@@ -151,8 +197,8 @@ paths.each do |path|
   result[path] = r
 end
 
-ap result if o_r
-puts 'html output not implementd yet' if o_h
-puts result.to_yaml if o_y
+o_t_r result
+o_t_h result
+o_t_y result
 
 # vim:set fileencoding=utf8 fileformat=undefined filetype=ruby tabstop=2 expandtab:
