@@ -3,6 +3,7 @@ require 'getoptlong'
 require 'gitrepo/status'
 require 'awesome_print'
 require 'yaml'
+require 'json'
 
 class Hash
   def to_html
@@ -31,7 +32,7 @@ def clidoc
     If this ends in '/' the script will loop over
     all subdirectories. These should all be git repos.
 
-    -o, --output [txt|raw|html|yaml|...].
+    -o, --output [txt|raw|html|yaml|json|...].
     Multiple types specified by comma separated string.
     eg : -o txt,html
     Default 'txt'
@@ -93,6 +94,7 @@ OR = output.include?('raw')
 OT = output.include?('txt')
 OH = output.include?('html')
 OY = output.include?('yaml')
+OJ = output.include?('json')
 
 paths = if path.end_with? '/'
           Dir.glob("#{path}*/")
@@ -147,6 +149,11 @@ def o_t_y(obj)
   puts obj.to_yaml
 end
 
+def o_t_j(obj)
+  return unless OJ
+  puts obj.to_json
+end
+
 paths.each do |path|
   o_t_p "Path : #{path}"
   r = {}
@@ -182,6 +189,7 @@ paths.each do |path|
     unless diff.empty?
       diff.each do |name, data|
         r[name] ||= {}
+        r[name]['puppet'] ||= {}
         o_t_p "--- metadata difference with branch : #{name} (keys #{keys})"
         data.select { |key, _| keys.include?(key) }.each do |k, v|
           o_t_p "   Key : #{k}"
@@ -189,7 +197,7 @@ paths.each do |path|
           o_t_p v[0], true
           o_t_p '     New  : '
           o_t_p v[1], true
-          r[name][k] = { 'Old' => v[0], 'New' => v[1] }
+          r[name]['puppet'][k] = { 'Old' => v[0], 'New' => v[1] }
         end
       end
     end
@@ -200,5 +208,6 @@ end
 o_t_r result
 o_t_h result
 o_t_y result
+o_t_j result
 
 # vim:set fileencoding=utf8 fileformat=undefined filetype=ruby tabstop=2 expandtab:
