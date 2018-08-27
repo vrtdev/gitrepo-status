@@ -136,7 +136,9 @@ def o_t_h(obj)
   </head>
   <body>
 
-  #{obj.to_html}
+    <h2>Puppet Module report : #{Time.now}</h2>
+
+    #{obj.to_html}
 
   </body>
 </html>

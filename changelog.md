@@ -5,6 +5,10 @@ Version format based on http://semver.org/
 
 ## [Unreleased]
 
+## [0.2.1] - 2018-03-27
+### Added
+- Added  html header with title and build datetime
+
 ## [0.1.0] - 2018-03-27
 ### Added
 - gitrepo-status cli script
