@@ -6,6 +6,9 @@ apt-get -y update
 
 apt-get -y upgrade
 
-apt-get install -y git curl rubygems ruby-rugged
+apt-get install -y git curl
+apt-get install -y libcurl4-openssl-dev libssl-dev
+apt-get install -y ruby-dev rubygems
+# apt-get install -y ruby-rugged
 
 gem install bundler

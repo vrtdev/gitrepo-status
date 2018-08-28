@@ -1,8 +1,9 @@
 PATH
   remote: .
   specs:
-    gitrepo-status (0.2.1)
+    gitrepo-status (0.2.2)
       awesome_print
+      rugged
 
 GEM
   remote: https://rubygems.org/
@@ -23,6 +24,7 @@ GEM
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.7.0)
     rspec-support (3.7.1)
+    rugged (0.27.4)
 
 PLATFORMS
   ruby
@@ -34,4 +36,4 @@ DEPENDENCIES
   rspec (~> 3.7)
 
 BUNDLED WITH
-   1.16.1
+   1.16.4
