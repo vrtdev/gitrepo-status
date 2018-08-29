@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    gitrepo-status (0.2.2)
+    gitrepo-status (0.2.3)
       awesome_print
       rugged
 

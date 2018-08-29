@@ -120,6 +120,7 @@ end
 
 def o_t_h(obj)
   return unless OH
+  obj.keys.sort.each { |k| obj[k] = obj.delete k }
   html_str = %(
 <!DOCTYPE html>
 <html>
